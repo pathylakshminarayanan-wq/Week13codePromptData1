@@ -1,0 +1,82 @@
+id: bring_your_own_data_chat_qna
+name: Bring Your Own Data Chat QnA
+inputs:
+  question:
+    type: string
+    default: ""
+    is_chat_input: true
+  sample_data:
+    type: string
+    default: ""
+    is_chat_input: false
+  schema:
+    type: string
+    default: ""
+    is_chat_input: false
+  input:
+    type: string
+    default: ""
+    is_chat_input: false
+outputs:
+  output:
+    type: string
+    reference: ${synthesis_node.output}
+    is_chat_output: true
+nodes:
+- name: Data_Loader
+  type: python
+  source:
+    type: code
+    path: Dara_Loader.py
+  inputs: {}
+  use_variants: false
+- name: code_gen_node
+  type: llm
+  source:
+    type: code
+    path: code_gen_node.jinja2
+  inputs:
+    deployment_name: gpt-4.1-PathyLLMOPS
+    temperature: 1
+    top_p: 1
+    max_tokens: 16
+    response_format:
+      type: text
+    question: ${inputs.question}
+    sample_data: ${Data_Loader.output.sample_data}
+    schema: ${Data_loader.output.schema]
+  provider: AzureOpenAI
+  connection: PathyL_aoai
+  api: chat
+  module: promptflow.tools.aoai
+  use_variants: false
+- name: executor_node
+  type: python
+  source:
+    type: code
+    path: executor_node.py
+  inputs:
+    code: ${code_gen_node.output}
+  use_variants: false
+- name: synthesis_node
+  type: llm
+  source:
+    type: code
+    path: synthesis_node.jinja2
+  inputs:
+    deployment_name: gpt-4.1-PathyLLMOPS
+    temperature: 1
+    top_p: 1
+    max_tokens: 16
+    response_format:
+      type: text
+    execution_result: ${executor_node.output}
+    query: ${inputs.question}
+  provider: AzureOpenAI
+  connection: PathyL_aoai
+  api: chat
+  module: promptflow.tools.aoai
+  use_variants: false
+node_variants: {}
+environment:
+  python_requirements_txt: requirements.txt
